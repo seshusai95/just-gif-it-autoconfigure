@@ -7,19 +7,25 @@ import com.madgag.gif.fmsware.AnimatedGifEncoder;
 import org.bytedeco.javacv.FrameGrabber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.embedded.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.HiddenHttpMethodFilter;
 import org.springframework.web.filter.HttpPutFormContentFilter;
 import org.springframework.web.filter.RequestContextFilter;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
-import javax.annotation.PostConstruct;
-import java.io.File;
+import java.util.Locale;
 
 @Configuration
 @ConditionalOnClass(value = {FrameGrabber.class, AnimatedGifEncoder.class})
@@ -36,6 +42,14 @@ import java.io.File;
             justGifItProperties.getGifLocation().mkdir();
         }
         return true;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(value = {LocaleResolver.class})
+    public LocaleResolver localeResolver() {
+        SessionLocaleResolver localeResolver = new SessionLocaleResolver();
+        localeResolver.setDefaultLocale(Locale.US);
+        return localeResolver;
     }
 
     @Bean
@@ -96,9 +110,16 @@ import java.io.File;
                     registry.addResourceHandler("/gif/**").addResourceLocations("file:" + gifLocation);
                     super.addResourceHandlers(registry);
                 }
+
+                @Override
+                public void addInterceptors(InterceptorRegistry registry) {
+                    LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
+                    localeChangeInterceptor.setParamName("location");
+                    registry.addInterceptor(localeChangeInterceptor);
+                    super.addInterceptors(registry);
+                }
             };
         }
-
     }
 
 
